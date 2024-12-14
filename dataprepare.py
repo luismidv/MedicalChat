@@ -5,7 +5,10 @@ import nltk
 from nltk.stem.porter import PorterStemmer
 import numpy as np
 from torch.utils.data import Dataset,DataLoader
-
+import train
+from tqdm import tqdm
+import torch.nn as nn
+from torch import optim
 nltk.download('punkt_tab')
 X_train = []
 Y_train = []
@@ -83,7 +86,10 @@ def process_data(data):
         for pattern in intents['patterns']:
             w = nltk.word_tokenize(pattern)
             patterns.extend(w)
+            
             feature_label.append((w,intents['tag']))
+    print(len(tags))
+    print(len(patterns))
     new_function(patterns,feature_label,tags)
 
 def new_function(patterns,feature_label,tags):
@@ -125,20 +131,38 @@ class ChatBotDataset(Dataset):
     def __init__(self,feature,label):
         self.feature = feature
         self.label = label
+        
 
     def __len__(self):
         return len(self.feature)
     
     def __getitem__(self, index):
-        feature = feature[index]
-        label = label[index]
-        return feature,label
-
+        print(f"Examples with sizes {len(self.feature)} | {len(self.label)}")
+        print(f"Index {index}")
+        feature = self.feature[index]
+        label = self.label[index]
+        return feature, label
+    
+    
+print(f"Ytrain \n {len(Y_train)}")
 train_data = ChatBotDataset(X_train,Y_train)
-test_data = ChatBotDataset(X_test,Y_test)
-trainChatLoader = DataLoader(train_data, batch_size = 64, shuffle=True)
-testChatLoader = DataLoader(test_data, batch_size = 64, shuffle=True)
+# test_data = ChatBotDataset(X_test,Y_test)
+trainChatLoader = DataLoader(train_data, batch_size = 8, shuffle=True)
+# testChatLoader = DataLoader(test_data, batch_size = 8, shuffle=True)
 
+input_size = 395
+batch_size = 8
+hidden_size = 8
+output_size = 132
+learning_rates = [0.01,0.05,0.1,0.15]
+
+neuralNet = train.NeuralNetwork(input_size,hidden_size,output_size)
+loss_fn = nn.CrossEntropyLoss()
+optimizer = optim.Adam(neuralNet.parameters(), lr = 3e-4)
+
+for epoch in range(20):
+    prediction = train.model_training(neuralNet, trainChatLoader,loss_fn, optimizer)
+print(f"Fin training max prob for prediction {prediction}")
 
 
 
